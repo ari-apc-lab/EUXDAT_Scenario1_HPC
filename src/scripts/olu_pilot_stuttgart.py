@@ -40,7 +40,7 @@ class DB_Storage():
         return olu_feature
     def update_olu_features(self, schema, table, raster_file, kind):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        query=('select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where st_npoints(geom)>2 and id=9993877;' % (schema, table) )
+        query=('select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where st_npoints(geom)>2;' % (schema, table) )
         cursor.execute(query)
         blacklist=[]
         whitelist=[]
@@ -378,7 +378,7 @@ def main():
         db.disconnect()
         db.connect()
     print('start_update')
-    db.update_olu_features('elu_austria', 'at30810', raster_file,  kind='morphometric')  # change to correct schema, table
+    db.update_olu_features('european_land_use', 'areas_master', raster_file,  kind='morphometric')  # change to correct schema, table
     # follows method that dumps database and sends it to ATOS cloud or just dumps and stores temporary on server for others to be able to download dump file
 
 if __name__ == '__main__':
