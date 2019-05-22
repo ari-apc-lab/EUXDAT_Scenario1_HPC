@@ -49,8 +49,13 @@ class DB_Storage():
         cursor.close()
         return statistics
         
-    #def read_raster(self, id, kind):
-        
+    def read_raster(self, schema,  table,  id, kind):
+        cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        query="select ST_AsGDALRaster(%s, 'GTiff', ARRAY['COMPRESS=LZW'], 3857) as raster from %s.%s where id=%s" % (kind, schema, table, id)
+        cursor.execute(query)
+        raster=cursor.fetchone()['raster']
+        cursor.close()
+        return raster
         
     def create_olu_feature(self,schema, table,id):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)

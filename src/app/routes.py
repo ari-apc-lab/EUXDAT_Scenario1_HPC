@@ -28,11 +28,11 @@ def get_params_of_get_field_statistics():
     return get_field_statistics(id)
 def get_field_statistics(id, onfly=False):
     if onfly==False:
-        r=dbs.read_field_statistic(id)
-        return json.dumps(r.json())
+        r=dbs.read_field_statistics('elu_austria','at30810',id)
+        return json.dumps(r)
     else:
         return print('this time onfly generation is not supported .')
-'''
+
 @app.route('/get_field_raster', methods=['GET'])
 def get_params_of_get_field_raster():
     id = int(request.args.get('id'))
@@ -42,16 +42,16 @@ def get_params_of_get_field_raster():
 def get_field_raster(id,kind, output, onfly=False):
     if onfly==False:
         if  output=='image':
-            image=dbs.read_raster(id, kind)
+            image=dbs.read_raster('elu_austria','at30810',id, kind)
             buffer = BytesIO()
             buffer.write(image)
             buffer.seek(0)
-            return send_file(image,attachment_filename="image.tif", as_attachment=True)
+            return send_file(buffer,attachment_filename=("%s_raster.tif" % kind), as_attachment=True)
         elif output=='wms':
-            wms=dbs.read_field.generate_wms(id, kind)
+            wms=dbs.read_field.generate_wms('elu_austria','at30810',id, kind)
             return wms
         else:
             return print('this output type is not supported .')
     else:
-        return print('this time onfly generation is not supported .')'''
+        return print('this time onfly generation is not supported .')
     

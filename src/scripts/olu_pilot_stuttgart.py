@@ -40,11 +40,12 @@ class DB_Storage():
         return olu_feature
     def update_olu_features(self, schema, table, raster_file, kind):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        query=('select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where st_npoints(geom)>2;' % (schema, table) )
+        query=('select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where st_npoints(geom)>2 and id=9993877;' % (schema, table) )
         cursor.execute(query)
         blacklist=[]
         whitelist=[]
         rowcount=cursor.rowcount
+        print(rowcount)
         while (len(blacklist)+len(whitelist))<rowcount:
             cursor=cursor
             for i in cursor:
@@ -149,6 +150,7 @@ class OLU_Feature():
         dictionary['slope']=self.read_raster('slope').get_statistics()
         dictionary['azimuth']=self.read_raster('azimuth').get_statistics()
         dictionary['twi']=self.read_raster('twi').get_statistics()
+        return dictionary
     
     def get_twi(self):
         dem_export_fn='/tmp/dem_%s.tif' % self._id
@@ -178,16 +180,16 @@ class OLU_Feature():
         return contour_lines
         
     def update(self, db_storage, schema,  table,  kind):
-        update_statement=('update %s.%s set elevation = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, 1, 1, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
-        slope = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, 1, 1, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
-        azimuth = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, 1, 1, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
-        twi = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, 1, 1, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
+        update_statement=('update %s.%s set elevation = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
+        slope = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
+        azimuth = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
+        twi = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
         morphometric_statistics = (\'%s\'::json) \
         where id=%s;' %(schema, table,
-        self.read_raster('dem').get_data().shape[1],self.read_raster('dem').get_data().shape[0],self.read_raster('dem').get_metadata()['affine_transformation'][0],self.read_raster('dem').get_metadata()['affine_transformation'][3],self.read_raster('dem').get_metadata()['nodata'],(np.array2string(self.read_raster('dem').get_data().filled(self.read_raster('dem').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
-        self.read_raster('slope').get_data().shape[1],self.read_raster('slope').get_data().shape[0],self.read_raster('slope').get_metadata()['affine_transformation'][0],self.read_raster('slope').get_metadata()['affine_transformation'][3],self.read_raster('slope').get_metadata()['nodata'],(np.array2string(self.read_raster('slope').get_data().filled(self.read_raster('slope').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
-        self.read_raster('azimuth').get_data().shape[1],self.read_raster('azimuth').get_data().shape[0],self.read_raster('azimuth').get_metadata()['affine_transformation'][0],self.read_raster('azimuth').get_metadata()['affine_transformation'][3],self.read_raster('azimuth').get_metadata()['nodata'],(np.array2string(self.read_raster('azimuth').get_data().filled(self.read_raster('azimuth').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
-        self.read_raster('twi').get_data().shape[1],self.read_raster('twi').get_data().shape[0],self.read_raster('twi').get_metadata()['affine_transformation'][0],self.read_raster('twi').get_metadata()['affine_transformation'][3],self.read_raster('twi').get_metadata()['nodata'],(np.array2string(self.read_raster('twi').get_data().filled(self.read_raster('twi').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
+        self.read_raster('dem').get_data().shape[1],self.read_raster('dem').get_data().shape[0],self.read_raster('dem').get_metadata()['affine_transformation'][0],self.read_raster('dem').get_metadata()['affine_transformation'][3],self.read_raster('dem').get_metadata()['affine_transformation'][1], self.read_raster('dem').get_metadata()['affine_transformation'][5], self.read_raster('dem').get_metadata()['nodata'],(np.array2string(self.read_raster('dem').get_data().filled(self.read_raster('dem').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
+        self.read_raster('slope').get_data().shape[1],self.read_raster('slope').get_data().shape[0],self.read_raster('slope').get_metadata()['affine_transformation'][0],self.read_raster('slope').get_metadata()['affine_transformation'][3],self.read_raster('dem').get_metadata()['affine_transformation'][1], self.read_raster('dem').get_metadata()['affine_transformation'][5], self.read_raster('slope').get_metadata()['nodata'],(np.array2string(self.read_raster('slope').get_data().filled(self.read_raster('slope').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
+        self.read_raster('azimuth').get_data().shape[1],self.read_raster('azimuth').get_data().shape[0],self.read_raster('azimuth').get_metadata()['affine_transformation'][0],self.read_raster('azimuth').get_metadata()['affine_transformation'][3],self.read_raster('dem').get_metadata()['affine_transformation'][1], self.read_raster('dem').get_metadata()['affine_transformation'][5], self.read_raster('azimuth').get_metadata()['nodata'],(np.array2string(self.read_raster('azimuth').get_data().filled(self.read_raster('azimuth').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
+        self.read_raster('twi').get_data().shape[1],self.read_raster('twi').get_data().shape[0],self.read_raster('twi').get_metadata()['affine_transformation'][0],self.read_raster('twi').get_metadata()['affine_transformation'][3],self.read_raster('dem').get_metadata()['affine_transformation'][1], self.read_raster('dem').get_metadata()['affine_transformation'][5], self.read_raster('twi').get_metadata()['nodata'],(np.array2string(self.read_raster('twi').get_data().filled(self.read_raster('twi').get_metadata()['nodata']), separator=',',formatter={'float_kind':lambda x: "%.4f" % x},prefix='[',suffix=']').replace('\n', '')), 
         json.dumps(self.get_morphometric_statistics()),
         self._id) )
         db_storage.update(update_statement)
@@ -362,7 +364,7 @@ class Imagee():
 
 def main():
     np.set_printoptions(threshold=sys.maxsize)
-    raster_file='/file_location/eu_dem_3857.tif' # add correct file_location
+    raster_file='/home/dima/Documents/data/eu_dem_wv_3857.tif' # add correct file_location
     db=DB_Storage({'dbname':'gis','user':'postgres','host':'localhost','port':'5432','password':'postgres'}) # change to correct connection string
     db.connect()
     print('connected')
@@ -376,7 +378,7 @@ def main():
         db.disconnect()
         db.connect()
     print('start_update')
-    db.update_olu_features('european_land_use', 'areas_master', raster_file,  kind='morphometric')  # change to correct schema, table
+    db.update_olu_features('elu_austria', 'at30810', raster_file,  kind='morphometric')  # change to correct schema, table
     # follows method that dumps database and sends it to ATOS cloud or just dumps and stores temporary on server for others to be able to download dump file
 
 if __name__ == '__main__':
