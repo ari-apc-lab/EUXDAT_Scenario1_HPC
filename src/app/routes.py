@@ -27,11 +27,17 @@ def get_fields_geometry(bbox):
 @app.route('/get_field_statistics', methods=['GET'])
 def get_params_of_get_field_statistics():
     id = int(request.args.get('id'))
-    return get_field_statistics(id)
-def get_field_statistics(id, onfly=False):
-    if onfly==False:
+    onfly = str(request.args.get('onfly'))
+    return get_field_statistics(id, onfly)
+def get_field_statistics(id, onfly):
+    if onfly=='false':
         r=dbs.read_field_statistics(schema,table,id)
         return json.dumps(r)
+    elif onfly=='true':
+        field=dbs.create_olu_feature(schema,table,id)
+        field.read_dem(raster_file)
+        field.get_morphometric_characteristics()
+        return field.get_morphometric_statistics()
     else:
         return print('this time onfly generation is not supported .')
 

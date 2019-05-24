@@ -49,10 +49,16 @@ class DB_Storage():
     def read_field_statistics(self, schema,  table,  id):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query="select morphometric_statistics from %s.%s where id=%s" % (schema, table, id)
-        cursor.execute(query)
-        statistics=cursor.fetchone()
-        cursor.close()
-        return statistics
+        try:
+            cursor.execute(query)
+            statistics=cursor.fetchone()
+            cursor.close()
+            return statistics
+        except:
+            cursor.close()
+            self.disconnect()
+            self.connect()
+            return None
         
     def read_raster(self, schema,  table,  id, kind):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
