@@ -39,7 +39,7 @@ def get_field_statistics(id, onfly):
         field.get_morphometric_characteristics()
         return field.get_morphometric_statistics()
     else:
-        return print('this time onfly generation is not supported .')
+        return print('onfly parameter takes values true/false only .')
 
 @app.route('/get_field_raster', methods=['GET'])
 def get_params_of_get_field_raster():
@@ -73,5 +73,5 @@ def get_field_raster(id,kind, output, onfly='false'):
         buffer.seek(0)
         return send_file(buffer,attachment_filename=("%s_raster.tif" % kind), as_attachment=True)
     else:
-        return print('onfly parameter takes values True/False only .')
+        return print('onfly parameter takes values true/false only .')
     
