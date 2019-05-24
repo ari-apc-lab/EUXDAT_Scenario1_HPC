@@ -37,6 +37,7 @@ def get_field_statistics(id, onfly):
         field=dbs.create_olu_feature(schema,table,id)
         field.read_dem(raster_file)
         field.get_morphometric_characteristics()
+        field.get_twi()
         return field.get_morphometric_statistics()
     else:
         return print('onfly parameter takes values true/false only .')
