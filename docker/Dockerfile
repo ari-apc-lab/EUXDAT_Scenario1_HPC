@@ -1,17 +1,29 @@
- # Use an official Python runtime as a parent image
-FROM python:3.6
+FROM conda/miniconda3
 
-# Set the working directory to the current directory
+RUN conda update conda \
+ && conda install -c conda-forge  -y \
+    flask\
+    flask-restplus \
+    gdal=2.4.1 \
+    libgdal \
+    psycopg2 \
+    pillow \
+    rtree \
+    werkzeug \
+ && conda clean -tipsy
+
+RUN apt-get update && apt-get install -y build-essential  
+RUN pip install cython
+RUN pip install  \
+    flask-session \
+    pygeoprocessing
+
 WORKDIR /app
+COPY src /app
 
-# Copy the current directory contents into the container at /app
-COPY ../src /app
+ENV FLASK_ENV development
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --trusted-host pypi.python.org -r ../requirements.txt
-
-# Make port 80 available to the world outside this container
-# EXPOSE 80
+EXPOSE 5000
 
 RUN adduser --disabled-password myuser
 USER myuser
@@ -20,3 +32,5 @@ ENTRYPOINT ["python"]
 
 # Run app.py when the container launches
 CMD ["app.py"]
+
+
