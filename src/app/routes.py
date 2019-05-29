@@ -38,7 +38,7 @@ def get_field_statistics(id, onfly):
         field.read_dem(raster_file)
         field.get_morphometric_characteristics()
         field.get_twi()
-        return json.dump(field.get_morphometric_statistics())
+        return json.dumps(field.get_morphometric_statistics())
     else:
         return print('onfly parameter takes values true/false only .')
 
