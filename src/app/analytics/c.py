@@ -185,6 +185,7 @@ class OLU_Feature():
         dictionary['slope']=self.read_raster('slope').get_statistics()
         dictionary['azimuth']=self.read_raster('azimuth').get_statistics()
         dictionary['twi']=self.read_raster('twi').get_statistics()
+        return dictionary
     
     def get_twi(self):
         dem_export_fn='%s/dem_%s.tif' % (os.environ['temporary_folder'], self._id)
