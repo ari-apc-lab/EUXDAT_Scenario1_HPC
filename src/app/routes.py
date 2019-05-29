@@ -58,7 +58,7 @@ def get_field_raster(id,kind, output, onfly='false'):
             buffer.seek(0)
             return send_file(buffer,attachment_filename=("%s_raster.tif" % kind), as_attachment=True)
         elif output=='wms':
-            wms=dbs.read_field.generate_wms(schema,table,id, kind)
+            wms=dbs.create_olu_feature(schema, table,id).generate_wms(kind)
             return wms
         else:
             return print('this output type is not supported .')

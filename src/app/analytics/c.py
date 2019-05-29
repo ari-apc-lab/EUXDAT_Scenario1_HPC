@@ -207,6 +207,10 @@ class OLU_Feature():
         os.remove(direction_export_fn)
         os.remove(accumulation_export_fn)
         return twi
+        
+    def generate_wms(self, kind,  url_root='https://mapserver.test.euxdat.eu/cgi-bin/mapserv?map=/var/www/html/olu/olu.map'):
+        wms_url=(url_root+'&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=olu_by_id&CRS=EPSG:3857'+'&MUNICIPALITY='+str(self._nuts_id)+'&ID='+str(self._id)+'&KIND='+str(kind))
+        return(wms_url)
     
     def generate_contour_lines(self, interval):
         dem=self.read_raster('elevation')
@@ -262,6 +266,9 @@ class Imagee():
         Returns 2D matrix of values.
         '''
         return self._data  
+        
+    def image_to_geo_coordinates(self, rownum, colnum):
+        return( (self._metadata['affine_transformation'][0]+colnum*self._metadata['affine_transformation'][1]+0.5*self._metadata['affine_transformation'][1], self._metadata['affine_transformation'][3]+rownum*self._metadata['affine_transformation'][5]+0.5*self._metadata['affine_transformation'][5]) )
     
     def clip_by_shape(self, geom_wkt, nodata=-32767):
         '''
