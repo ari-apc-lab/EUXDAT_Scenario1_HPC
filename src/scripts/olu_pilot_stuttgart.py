@@ -46,13 +46,17 @@ class DB_Storage():
         whitelist=[]
         rowcount=cursor.rowcount
         print(rowcount)
+        raster=gdal.Open(raster_file)
+        metadata_dict={}
+        metadata_dict['affine_transformation']=raster.GetGeoTransform()
+        raster_i=Imagee(np.array(raster.GetRasterBand(1).ReadAsArray()),metadata_dict)
         while (len(blacklist)+len(whitelist))<rowcount:
             cursor=cursor
             for i in cursor:
                 olu_feature=OLU_Feature(**i)
                 id=olu_feature.get_id()
                 try:
-                    olu_feature.read_dem(raster_file)
+                    olu_feature.read_dem2(raster_i)
                     olu_feature.get_morphometric_characteristics(return_images=False)
                     olu_feature.get_twi()
                     olu_feature.update(self, schema, table, 'morphometric')
@@ -135,6 +139,11 @@ class OLU_Feature():
         self.add_raster(dem_cropped,'dem')
         print('Added!')
         
+    def read_dem2(self,dem_i):
+        dem_cropped=Imagee(*dem_i.clip_by_shape(self._geom_wkt,-32767))
+        self.add_raster(dem_cropped,'dem')
+        print('Added!')
+        
     def get_morphometric_characteristics(self, return_images=True):
         dem=self.read_raster('dem')
         dem_slope=dem.calculate_slope()
@@ -143,7 +152,8 @@ class OLU_Feature():
         self.add_raster(Imagee(*dem_azimuth),'azimuth')
         if return_images:
             return((self.read_raster('slope'),self.read_raster('azimuth')))
-            
+        return ('morphometric characteristics calculated!')
+        
     def get_morphometric_statistics(self):
         dictionary={}
         dictionary['elevation']=self.read_raster('dem').get_statistics()
@@ -153,10 +163,10 @@ class OLU_Feature():
         return dictionary
     
     def get_twi(self):
-        dem_export_fn='/tmp/dem_%s.tif' % self._id
-        cdem_export_fn='/tmp/cdem_%s.tif' % self._id
-        direction_export_fn='/tmp/direction_%s.tif' % self._id
-        accumulation_export_fn='/tmp/accumulation_%s.tif' % self._id
+        dem_export_fn='%s/dem_%s.tif' % (os.environ['temporary_folder'], self._id)
+        cdem_export_fn='%s/cdem_%s.tif' % (os.environ['temporary_folder'], self._id)
+        direction_export_fn='%s/direction_%s.tif' % (os.environ['temporary_folder'], self._id)
+        accumulation_export_fn='%s/accumulation_%s.tif' % (os.environ['temporary_folder'], self._id)
         dem=self.read_raster('dem')
         dem.export_as_tif(dem_export_fn)
         routing.fill_pits((dem_export_fn,1),cdem_export_fn)
@@ -364,21 +374,22 @@ class Imagee():
 
 def main():
     np.set_printoptions(threshold=sys.maxsize)
-    raster_file='/home/dima/Documents/data/eu_dem_wv_3857.tif' # add correct file_location
-    db=DB_Storage({'dbname':'gis','user':'postgres','host':'localhost','port':'5432','password':'postgres'}) # change to correct connection string
+    raster_file=os.environ['dem_raster_file']# add correct file_location
+    db=DB_Storage({'dbname':'%s' % os.environ['database'],'user':'%s' % os.environ['username'],'host':'%s' % os.environ['server'],'port':'%s' % os.environ['port'],'password':'%s'% os.environ['password']})
     db.connect()
+    schema, table=os.environ['schema'], os.environ['table']
     print('connected')
     try:
-        db.alter('alter table european_land_use.areas_master add column elevation raster;') # change to correct schema, table
-        db.alter('alter table european_land_use.areas_master add column slope raster;')  # change to correct schema, table
-        db.alter('alter table european_land_use.areas_master add column azimuth raster;')  # change to correct schema, table
-        db.alter('alter table european_land_use.areas_master add column twi raster;')  # change to correct schema, table
-        db.alter('alter table european_land_use.areas_master add column morphometric_statistics json;')  # change to correct schema, table
+        db.alter('alter table %s.%s add column elevation raster;' % (schema, table) ) # change to correct schema, table
+        db.alter('alter table %s.%s add column slope raster;'  % (schema, table))  # change to correct schema, table
+        db.alter('alter table %s.%s add column azimuth raster;'  % (schema, table))  # change to correct schema, table
+        db.alter('alter table %s.%s add column twi raster;'  % (schema, table))  # change to correct schema, table
+        db.alter('alter table %s.%s add column morphometric_statistics json;'  % (schema, table))  # change to correct schema, table
     except:
         db.disconnect()
         db.connect()
     print('start_update')
-    db.update_olu_features('european_land_use', 'areas_master', raster_file,  kind='morphometric')  # change to correct schema, table
+    db.update_olu_features(schema, table, raster_file,  kind='morphometric')  # change to correct schema, table
     # follows method that dumps database and sends it to ATOS cloud or just dumps and stores temporary on server for others to be able to download dump file
 
 if __name__ == '__main__':

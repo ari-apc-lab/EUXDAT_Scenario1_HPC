@@ -16,25 +16,25 @@ class DB_Storage():
     def __init__(self, connection_parameters,  kind='postgresql'):
         self._connection_parameters=connection_parameters
         self._kind=kind
-        
+
     def connect(self):
         self._connection = psycopg2.connect("dbname='%s' user='%s' host='%s' port=%s password='%s'" % (self._connection_parameters['dbname'],self._connection_parameters['user'] , self._connection_parameters['host'], self._connection_parameters['port'], self._connection_parameters['password']) )
-    
+
     def disconnect(self):
         self._connection.close()
-        
+
     def update(self, update_statement):
         cursor=self._connection.cursor()
         cursor.execute(update_statement)
         self._connection.commit()
         cursor.close()
-        
+
     def alter(self, alter_statement):
         cursor=self._connection.cursor()
         cursor.execute(alter_statement)
         self._connection.commit()
         cursor.close()
-        
+
     def read_olu_features(self, schema, table, bbox):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query="select id, municipal_code as nuts_id, st_asgeojson(geom)::json as geom_wkt from %s.%s where geom&&st_setsrid(st_makebox2d(st_makepoint(%s,%s),st_makepoint(%s,%s)),3857)" %(schema, table, *bbox.split(',')) 
@@ -45,7 +45,7 @@ class DB_Storage():
         cursor.close()
         geojson_object={'type': 'FeatureCollection', 'features':features_collection}
         return geojson_object
-        
+
     def read_field_statistics(self, schema,  table,  id):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query="select morphometric_statistics from %s.%s where id=%s" % (schema, table, id)
@@ -59,7 +59,7 @@ class DB_Storage():
             self.disconnect()
             self.connect()
             return None
-        
+
     def read_raster(self, schema,  table,  id, kind):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query="select ST_AsGDALRaster(%s, 'GTiff', ARRAY['COMPRESS=LZW'], 3857) as raster from %s.%s where id=%s" % (kind, schema, table, id)
@@ -67,14 +67,14 @@ class DB_Storage():
         raster=cursor.fetchone()['raster']
         cursor.close()
         return raster
-        
+
     def create_olu_feature(self,schema, table,id):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute("select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where id=%s" %(schema, table, id) )
         olu_feature=OLU_Feature(**cursor.fetchone())
         cursor.close()
         return olu_feature
-        
+
     def update_olu_features(self, schema, table, raster_file, kind):
         cursor=self._connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query=('select id, municipal_code as nuts_id, st_astext(geom) as geom_wkt from %s.%s where st_npoints(geom)>2;' % (schema, table) )
@@ -103,7 +103,7 @@ class DB_Storage():
                     print(query)
                     cursor.execute(query)
                     break
-                
+
         print('job done')
         cursor.close()
 
@@ -121,7 +121,7 @@ def image_to_array(i):
 class OLU_Feature():
     '''Class mirror to db. Either using SQL-Alchemy, reading class from outside through Restfull API.
     '''
-    
+
     def __init__ (self, id, nuts_id,  geom_wkt,  user_id=0):
         '''
             inicializace tridy
@@ -132,19 +132,19 @@ class OLU_Feature():
         self._user_id = user_id
         self._rasters=[]
         self._rasters_index=[]
-        
+
     def get_id(self):
         return self._id
-    
+
     def get_userid(self):
         return self._user_id
-    
+
     def get_geomwkt(self):
         return self._geom_wkt
-    
+
     def get_nutsid(self):
         return self._nuts_id
-    
+
     def add_raster(self,raster,kind):
         if 'kind' in self._rasters_index:
             raster_index=self._rasters_index.index(kind)
@@ -152,7 +152,7 @@ class OLU_Feature():
         else:
             self._rasters.append(raster)
             self._rasters_index.append(kind)
-        
+
     def read_raster(self,kind):
         raster_index=self._rasters_index.index(kind)
         try:
@@ -160,16 +160,17 @@ class OLU_Feature():
             return self._rasters[raster_index]
         except:
             print('Error!')
-            
-    def read_dem(self,raster_path):
+
+    def add_raster_by_path(self,raster_path, kind):
+        #nezapomen opravit; predtim bylo read_dem
         ds = gdal.Open(raster_path)
         metadata_dict={}
         metadata_dict['affine_transformation']=ds.GetGeoTransform()
         dem=Imagee(np.array(ds.GetRasterBand(1).ReadAsArray()),metadata_dict)
         dem_cropped=Imagee(*dem.clip_by_shape(self._geom_wkt,-32767))
-        self.add_raster(dem_cropped,'elevation')
+        self.add_raster(dem_cropped,kind)
         print('Added!')
-        
+
     def get_morphometric_characteristics(self, return_images=False):
         dem=self.read_raster('elevation')
         dem_slope=dem.calculate_slope()
@@ -178,7 +179,8 @@ class OLU_Feature():
         self.add_raster(Imagee(*dem_azimuth),'azimuth')
         if return_images:
             return((self.read_raster('slope'),self.read_raster('azimuth')))
-            
+        return ('morphometric characteristics calculated!')
+
     def get_morphometric_statistics(self):
         dictionary={}
         dictionary['elevation']=self.read_raster('elevation').get_statistics()
@@ -208,16 +210,16 @@ class OLU_Feature():
         os.remove(direction_export_fn)
         os.remove(accumulation_export_fn)
         return twi
-        
+
     def generate_wms(self, kind,  url_root='https://mapserver.test.euxdat.eu/cgi-bin/mapserv?map=/var/www/html/olu/olu.map'):
         wms_url=(url_root+'&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=olu_by_id&CRS=EPSG:3857'+'&MUNICIPALITY='+str(self._nuts_id)+'&ID='+str(self._id)+'&KIND='+str(kind))
         return(wms_url)
-    
+
     def generate_contour_lines(self, interval):
         dem=self.read_raster('elevation')
         contour_lines=dem.generate_contour_lines(interval)
         return contour_lines
-        
+
     def update(self, db_storage, schema,  table,  kind):
         update_statement=('update %s.%s set elevation = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
         slope = ST_SetValues(ST_AddBand(ST_MakeEmptyRaster(%s, %s, %s, %s, %s, %s, 0, 0, 3857),\'32BF\'::text, 2, %s), 1, 1, 1,ARRAY%s::double precision[][]),\
@@ -232,7 +234,7 @@ class OLU_Feature():
         json.dumps(self.get_morphometric_statistics()),
         self._id) )
         db_storage.update(update_statement)
-    
+
     def convert_to_json(self):
         feature={'type':'Feature',  'geometry':self._geom_wkt, 'properties':{'id':self._id, 'nuts_id':self._nuts_id}}
         return feature
@@ -255,22 +257,22 @@ class Imagee():
             self._data = ma.array(dataarray,mask=[dataarray==self._metadata['nodata']])
         else:
             self._data = ma.array(dataarray,mask=[dataarray==-32767])
-            
+
     def get_metadata(self):
         '''
         Returns metadata dictionary.
         '''
         return self._metadata
-        
+
     def get_data(self):
         '''
         Returns 2D matrix of values.
         '''
         return self._data  
-        
+
     def image_to_geo_coordinates(self, rownum, colnum):
         return( (self._metadata['affine_transformation'][0]+colnum*self._metadata['affine_transformation'][1]+0.5*self._metadata['affine_transformation'][1], self._metadata['affine_transformation'][3]+rownum*self._metadata['affine_transformation'][5]+0.5*self._metadata['affine_transformation'][5]) )
-    
+
     def clip_by_shape(self, geom_wkt, nodata=-32767):
         '''
         Clip an Imagee by vector feature.
@@ -303,7 +305,7 @@ class Imagee():
         #   black and white, mask image.
         raster_poly = Image.new('L', (pxWidth, pxHeight), 1)
         rasterize = ImageDraw.Draw(raster_poly)
-        
+
         def rec(poly_geom):
             '''
             Recursive drawing of parts of multipolygons over initialized PIL Image object using ImageDraw.Draw method.
@@ -345,35 +347,35 @@ class Imagee():
         d['affine_transformation'],d['ul_x'],d['ul_y'],d['nodata']=gt2,ulX,ulY,nodata
         #clip = ma.array(clip,mask=[clip==nodata])
         return (clip, d)
-        
+
     def get_statistics(self):
         dictionary={'mean':self.get_mean_value(),'max':self.get_max_value(),'min':self.get_min_value()}
         return dictionary
-        
+
     def get_min_value(self):
         '''
         Get self min value excluding self nodata value.
         '''
         return np.min(self._data[np.where(self._data!=self._metadata['nodata'])])
-    
+
     def get_max_value(self):
         '''
         Get self max value excluding self nodata value.
         '''
         return np.max(self._data[np.where(self._data!=self._metadata['nodata'])])
-    
+
     def get_mean_value(self):
         '''
         Get self mean value excluding self nodata values.
         '''
         return np.mean(self._data[np.where(self._data!=self._metadata['nodata'])])
-    
+
     def get_median_value(self):
         '''
         Get self median value excluding self nodata values.
         '''
         return np.median(self._data[np.where(self._data!=self._metadata['nodata'])])
-    
+
     def calculate_slope(self):
         '''
         Calculate slope from self data of DEM image.
@@ -381,7 +383,7 @@ class Imagee():
         x, y = np.gradient(self._data)
         slope = np.pi/2. - np.arctan(np.sqrt(x*x + y*y))
         return (slope,self._metadata)
-    
+
     def calculate_azimuth(self):
         '''
         Calculate azimuth from self data of DEM image.
@@ -389,7 +391,7 @@ class Imagee():
         x, y = np.gradient(self._data)
         aspect = (np.arctan2(-x, y))*180/np.pi
         return (aspect,self._metadata)
-    
+
     def export_as_tif(self,filename):
         '''
         Export self data as GeoTiff 1-band image. 
@@ -407,7 +409,7 @@ class Imagee():
         output_raster.GetRasterBand(1).SetNoDataValue(self._metadata['nodata'])
         output_raster.FlushCache()
         del output_raster
-        
+
     def export_into_memory(self):
         nrows,ncols=self._data.shape
         geotransform = self._metadata['affine_transformation']
