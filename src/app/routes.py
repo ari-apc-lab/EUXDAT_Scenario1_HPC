@@ -35,7 +35,7 @@ def get_field_statistics(id, onfly):
         return json.dumps(r)
     elif onfly=='true':
         field=dbs.create_olu_feature(schema,table,id)
-        field.read_dem(raster_file)
+        field.add_raster_by_path(raster_file, 'elevation')
         field.get_morphometric_characteristics()
         field.get_twi()
         return json.dumps(field.get_morphometric_statistics())
@@ -64,7 +64,7 @@ def get_field_raster(id,kind, output, onfly='false'):
             return print('this output type is not supported .')
     elif onfly=='true':
         field=dbs.create_olu_feature(schema,table,id)
-        field.read_dem(raster_file)
+        field.add_raster_by_path(raster_file, 'elevation')
         if kind=='twi':
             field.get_twi()
         else:

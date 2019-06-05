@@ -68,7 +68,7 @@ grid.df<-grid[c(4:7)]
 
 grid.xy<-grid[c(3,1:2)]
 
-point.df[,5] <- as.numeric(point.df[,5]) -1 
+point.df[,5] <- as.numeric(point.df[,5])-1
 
 
 point.df<- as.matrix(point.df)
@@ -88,20 +88,27 @@ test <- point.df[ind==2, 1:4]
 trainingtarget <- point.df[ind==1, 5]
 testtarget <- point.df[ind==2, 5]
 
+FLAGS <- flags(
+flag_numeric('dropout_1', 0.2, 'First dropout'),
+flag_numeric('dropout_2', 0.2, 'Second dropout'),
+flag_numeric('dropout_3', 0.1, 'Third dropout'),
+flag_numeric('dropout_4', 0.1, 'Forth dropout')
+)
+
 model <- keras_model_sequential()
 model %>% 
   # Imput layer
-  layer_dense(units = 200, activation = 'relu', 
+  layer_dense(units = 500, activation = 'relu', 
               kernel_regularizer =regularizer_l1_l2(l1 = 0.00001, l2 = 0.00001),input_shape = c(4)) %>% 
   layer_dropout(rate = FLAGS$dropout_1,seed = 1) %>% 
   # Hidden layers
-  layer_dense(units = 200, activation = 'relu',
+  layer_dense(units = 500, activation = 'relu',
               kernel_regularizer = regularizer_l1_l2(l1 = 0.00001, l2 = 0.00001)) %>%
   layer_dropout(rate = FLAGS$dropout_2,seed = 1) %>%
-  layer_dense(units = 200, activation = 'relu',
+  layer_dense(units = 500, activation = 'relu',
               kernel_regularizer = regularizer_l1_l2(l1 = 0.00001, l2 = 0.00001)) %>%
   layer_dropout(rate = FLAGS$dropout_3,seed = 1) %>%
-  layer_dense(units = 200, activation = 'relu',
+  layer_dense(units = 500, activation = 'relu',
               kernel_regularizer = regularizer_l1_l2(l1 = 0.0001, l2 = 0.00001)) %>%
   layer_dropout(rate = FLAGS$dropout_4) %>%
   # Output layer
@@ -118,7 +125,7 @@ model %>% compile(
 
 history<-model %>% fit(
   training, trainingtarget, 
-  epochs = 500, 
+  epochs = 100, 
   batch_size = 100, 
   shuffle = TRUE,
   validation_split = 0.2
