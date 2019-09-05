@@ -9,7 +9,7 @@ metadata:
 spec:
   rules:
   - host: olu.test.euxdat.eu
-  - http:
+    http:
       paths:
       - path: / 
         backend:
