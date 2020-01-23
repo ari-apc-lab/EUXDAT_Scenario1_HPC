@@ -8,3 +8,4 @@ docker build --rm=true -t $IMAGE_NAME .
 docker tag $IMAGE_NAME registry.test.euxdat.eu/euxdat/$IMAGE_NAME
 docker push registry.test.euxdat.eu/euxdat/$IMAGE_NAME
 
+rm -rf src
