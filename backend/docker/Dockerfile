@@ -28,6 +28,8 @@ EXPOSE 5000
 RUN adduser --disabled-password myuser
 USER myuser
 
+RUN mkdir /app/flask_session
+
 ENTRYPOINT ["python"]
 
 # Run app.py when the container launches
