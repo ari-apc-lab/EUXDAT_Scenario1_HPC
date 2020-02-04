@@ -26,9 +26,9 @@ ENV FLASK_ENV development
 EXPOSE 5000
 
 RUN adduser --disabled-password myuser
+RUN mkdir /app/flask_session
 USER myuser
 
-RUN mkdir /app/flask_session
 
 ENTRYPOINT ["python"]
 
