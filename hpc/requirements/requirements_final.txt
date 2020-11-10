@@ -1,0 +1,15 @@
+numpy==1.18.5
+scikit-image
+sentinelsat
+matplotlib
+scipy
+psycopg2
+requests
+Pillow
+networkx
+lxml
+scikit-learn
+pandas
+tensorflow-cpu
+keras
+mpi4py

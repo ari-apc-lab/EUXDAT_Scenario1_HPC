@@ -1,0 +1,13 @@
+#!/bin/bash
+#PBS -N test_1process
+#PBS -l select=1:node_type=rome:mpiprocs=16
+#PBS -l walltime=09:00:00             
+  
+# Change to the direcotry that the job was submitted from
+cd $PBS_O_WORKDIR
+
+
+# Launch the parallel mpi application (compiled with intel mpi) to the allocated compute nodes
+. ~/.bashrc
+conda activate OLU_py3-8-3 
+time mpirun -np 1 ./segmentace3_parallel_executable > my_output_file 2>&1
